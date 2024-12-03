@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>상품 운송 적재 계획 생성 서비스</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-6">상품 운송 적재 계획 생성 서비스</h1>
+        
+        <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+            <form id="uploadForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">적재정보 파일 업로드</label>
+                    <input type="file" 
+                           id="fileInput" 
+                           accept=".xlsx" 
+                           class="mt-1 block w-full border border-gray-300 rounded-md p-2">
+                </div>
+                <button type="submit" 
+                        class="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition">
+                    파일 제출
+                </button>
+            </form>
+        </div>
+
+        <div id="loadingIndicator" class="hidden text-center mt-4">
+            <p class="text-blue-600">처리 중입니다... 잠시만 기다려주세요.</p>
+        </div>
+
+        <div id="resultSection" class="mt-6 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4">결과</h2>
+                
+                <div class="mb-4">
+                    <h3 class="font-bold">적재 요약</h3>
+                    <pre id="summaryText" class="bg-gray-100 p-3 rounded"></pre>
+                </div>
+
+                <div class="mb-4">
+                    <h3 class="font-bold">적재 계획 파일</h3>
+                    <a href="#" id="excelDownloadLink" class="text-blue-500 hover:underline">결과 엑셀 파일 다운로드</a>
+                </div>
+
+                <div>
+                    <h3 class="font-bold">적재 구성도</h3>
+                    <div id="imageGallery" class="grid grid-cols-3 gap-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('fileInput');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const resultSection = document.getElementById('resultSection');
+            const summaryText = document.getElementById('summaryText');
+            const excelDownloadLink = document.getElementById('excelDownloadLink');
+            const imageGallery = document.getElementById('imageGallery');
+
+            // Reset previous results
+            resultSection.classList.add('hidden');
+            imageGallery.innerHTML = '';
+            summaryText.textContent = '';
+
+            // Show loading
+            loadingIndicator.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            axios.post('/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            })
+            .then(response => {
+                // Hide loading
+                loadingIndicator.classList.add('hidden');
+                
+                // Show result section
+                resultSection.classList.remove('hidden');
+
+                // Set summary
+                summaryText.textContent = response.data.summary;
+
+                // Set excel download link
+                excelDownloadLink.href = `/download/${response.data.excel_path}`;
+
+                // Add images to gallery
+                response.data.image_paths.forEach(imagePath => {
+                    const img = document.createElement('img');
+                    img.src = `/download/${imagePath}`;
+                    img.classList.add('w-full', 'h-48', 'object-cover', 'rounded');
+                    img.onclick = () => window.open(img.src, '_blank');
+                    imageGallery.appendChild(img);
+                });
+            })
+            .catch(error => {
+                // Hide loading
+                loadingIndicator.classList.add('hidden');
+                
+                alert('파일 처리 중 오류가 발생했습니다: ' + error.response?.data?.error || error.message);
+            });
+        });
+    </script>
+</body>
+</html>
